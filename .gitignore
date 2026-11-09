@@ -1,0 +1,17 @@
+/tmp/
+/output/
+/WORKLOG.md
+/docs/browser-access-issue.md
+/tools/finish-ui.mjs
+/docs/diagrams/*.png
+**/node_modules/
+**/.wrangler/
+**/.sites-runtime/
+**/.vinext/
+**/dist/
+*.tsbuildinfo
+.env*
+.dev.vars*
+*.pem
+*.log
+.DS_Store
