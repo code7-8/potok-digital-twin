@@ -1,14 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdtempSync, unlinkSync, rmdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { simulate } from '../lib/engine/simulation.ts';
+import type { Dataset } from '../lib/engine/types.ts';
 import { handleApi } from '../lib/server/api.ts';
 import { BASE_SCENARIO } from '../lib/engine/fixtures.ts';
 import { replaySavedRun,type RunReplay } from '../lib/engine/replay.ts';
 
-function database(){
-  const sqlite=new DatabaseSync(':memory:');sqlite.exec('PRAGMA foreign_keys=ON');
-  for(const file of readdirSync(new URL('../drizzle/',import.meta.url)).filter(x=>x.endsWith('.sql')).sort())sqlite.exec(readFileSync(new URL(`../drizzle/${file}`,import.meta.url),'utf8'));
+function database(filename=':memory:',initialize=true){
+  const sqlite=new DatabaseSync(filename);sqlite.exec('PRAGMA foreign_keys=ON');
+  if(initialize)for(const file of readdirSync(new URL('../drizzle/',import.meta.url)).filter(x=>x.endsWith('.sql')).sort())sqlite.exec(readFileSync(new URL(`../drizzle/${file}`,import.meta.url),'utf8'));
   const wrap=(sql:string,args:unknown[]=[])=>({bind:(...values:unknown[])=>wrap(sql,values),
     first:async()=>sqlite.prepare(sql).get(...args as never[])??null,
     all:async()=>({results:sqlite.prepare(sql).all(...args as never[])}),
@@ -16,6 +20,57 @@ function database(){
   const db={prepare:(sql:string)=>wrap(sql),batch:async(statements:Array<{run:()=>Promise<unknown>}>)=>{sqlite.exec('BEGIN');try{const r=[];for(const s of statements)r.push(await s.run());sqlite.exec('COMMIT');return r;}catch(e){sqlite.exec('ROLLBACK');throw e;}}} as unknown as D1Database;
   return {db,sqlite};
 }
+
+test('valid export/import, calculation and replay survive closing SQLite and a new login', async t => {
+  const directory = mkdtempSync(join(tmpdir(), 'potok-acceptance-'));
+  const filename = join(directory, 'acceptance.sqlite');
+  let current = database(filename);
+  t.after(() => { try { current.sqlite.close(); } catch {} unlinkSync(filename); rmdirSync(directory); });
+  const cookie = await login(current.db);
+  const source = await (await handleApi(req('datasets/terminal-synthetic-v1-1', undefined, cookie), current.db)).json() as { data: Dataset };
+  const exported = JSON.parse(JSON.stringify(source.data)) as Dataset;
+  const imported = await handleApi(req('datasets', { name: 'Imported acceptance dataset', data: exported }, cookie), current.db);
+  assert.equal(imported.status, 201);
+  const { id: datasetId } = await imported.json() as { id: string };
+  const opened = await (await handleApi(req(`datasets/${datasetId}`, undefined, cookie), current.db)).json() as { data: Dataset };
+  assert.deepEqual(opened.data, { ...exported, id: datasetId });
+  const config = { ...structuredClone(BASE_SCENARIO), bayCount: 5, dispatchCount: 2, policy: 'due-date' as const };
+  const seed = 876;
+  const expected = simulate(opened.data, config, seed);
+  const saved = await handleApi(req('calculations', { datasetId, name: 'Acceptance saved shift', config, seed }, cookie), current.db);
+  assert.equal(saved.status, 201);
+  const { id: runId } = await saved.json() as { id: string };
+  const before = current.sqlite.prepare('SELECT COUNT(*) AS n FROM datasets').get()!.n;
+  const invalid = structuredClone(exported); invalid.orders[0].tonnes = -1;
+  assert.equal((await handleApi(req('datasets', { name: 'Invalid import', data: invalid }, cookie), current.db)).status, 400);
+  assert.equal(current.sqlite.prepare('SELECT COUNT(*) AS n FROM datasets').get()!.n, before);
+  await handleApi(req('logout', {}, cookie), current.db);
+  current.sqlite.close();
+  current = database(filename, false);
+  const newCookie = await login(current.db);
+  const history = await (await handleApi(req('runs', undefined, newCookie), current.db)).json() as Array<{ id: string }>;
+  assert.ok(history.some(r => r.id === runId));
+  const response = await handleApi(req(`runs/${runId}`, undefined, newCookie), current.db);
+  assert.equal(response.status, 200);
+  const record = await response.json() as RunReplay;
+  const replay = replaySavedRun(record);
+  assert.deepEqual(replay.metrics, expected.metrics);
+  assert.deepEqual(replay.orders, expected.orders);
+  assert.equal(replay.datasetId, datasetId);
+  assert.equal(replay.seed, seed);
+  assert.equal(current.sqlite.prepare("SELECT COUNT(*) AS n FROM audit_events WHERE action='dataset-import'").get()!.n, 1);
+});
+
+test('viewer cannot write through any dataset or calculation endpoint', async () => {
+  const { db, sqlite } = database();
+  try {
+    const cookie = await login(db, 'viewer');
+    for (const path of ['datasets', 'calculations', 'scenarios', 'runs']) {
+      assert.equal((await handleApi(req(path, {}, cookie), db)).status, 403, path);
+    }
+    for (const table of ['scenarios', 'runs']) assert.equal(sqlite.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get()!.n, 0);
+  } finally { sqlite.close(); }
+});
 function req(path:string,data?:unknown,cookie?:string,origin?:string){return new Request(`http://localhost:5173/api/${path}`,{method:data===undefined?'GET':'POST',headers:{...(data===undefined?{}:{'Content-Type':'application/json'}),...(cookie?{Cookie:cookie}:{}),...(origin?{Origin:origin}:{})},body:data===undefined?undefined:JSON.stringify(data)});}
 async function login(db:D1Database,user='analyst'){const r=await handleApi(req('login',{login:user,password:'Potok-2026!'}),db);assert.equal(r.status,200);return r.headers.get('set-cookie')!.split(';')[0];}
 

@@ -67,7 +67,7 @@ g=d('06-sequence','UML последовательность сохранения
 const participants=[['ui',25,'Интерфейс'],['api',245,'API'],['auth',465,'Сессия и роль'],['db',685,'SQLite / D1'],['engine',880,'Ядро']];
 participants.forEach(([id,x,t])=>{n(g,id,x,75,145,60,t,'rect',{font:18});g.edges.push({points:[[x+72,135],[x+72,640]],dash:true,arrow:false});});
 const msg=(y,a,b,label,back=false)=>{const ax=participants.find(p=>p[0]===a)[1]+72,bx=participants.find(p=>p[0]===b)[1]+72;g.edges.push({points:[[ax,y],[bx,y]],label,dash:back,labelY:y-12,font:17});};
-msg(185,'ui','api','POST /scenarios');msg(240,'api','auth','Проверить доступ');msg(285,'auth','api','ID и роль',true);msg(340,'api','db','Записать параметры');msg(390,'db','api','ID сценария',true);msg(445,'ui','api','POST /runs + seed');msg(495,'api','engine','Пересчитать');msg(540,'engine','api','Проверенные KPI',true);msg(585,'api','db','Сохранить KPI и версию');msg(635,'api','ui','Подтверждение',true);
+msg(185,'ui','api','POST /api/calculations');msg(240,'api','auth','Проверить доступ');msg(285,'auth','api','ID и роль',true);msg(340,'api','db','Загрузить набор');msg(390,'db','api','Данные + SHA-256',true);msg(445,'api','engine','Валидация и расчёт');msg(495,'engine','api','Проверенные KPI',true);msg(540,'api','db','batch: сценарий, расчёт, аудит');msg(585,'db','api','COMMIT или ROLLBACK',true);msg(635,'api','ui','ID расчёта + KPI',true);
 
 g=d('07-er','ER модель постоянного хранения',1040,830);
 n(g,'users',35,85,270,175,'USER\nPK id · UK login\nname · role\npassword_hash · salt','table');
@@ -80,7 +80,7 @@ e(g,'users','sessions','1 : N');e(g,'users','audit','1 : N',{points:[[170,85],[1
 n(g,'ernote',50,735,950,55,'JSON сохраняет полный типизированный снимок. Пользовательские записи и связи хранятся в БД','text',{font:20});
 
 g=d('08-architecture','Компоненты и границы доверия',1040,690);
-n(g,'ui',50,105,270,120,'React / Vinext\nРабочее место аналитика\nФормы и графики');n(g,'ww',405,105,270,120,'Web Worker\nСерии экспериментов\nПрогресс и отмена');n(g,'core',760,105,240,120,'Чистое ядро\nКалендарь событий\nSeed и инварианты');
+n(g,'ui',50,105,270,120,'React / Vinext\nРабочее место аналитика\nФормы и графики');n(g,'ww',405,105,270,120,'Web Worker\nСравнение и демонстрация\nПрогресс и отмена');n(g,'core',760,105,240,120,'Чистое ядро\nКалендарь событий\nSeed и инварианты');
 n(g,'three',50,340,270,120,'Three.js\nСцена и точки интереса\nВыбранное время');n(g,'api',405,340,270,120,'Серверные маршруты\nСессия и роль\nВалидация входов');n(g,'db',760,340,240,120,'SQLite / D1\nСценарии и расчёты\nЖурнал действий');
 e(g,'ui','ww','входы');e(g,'ww','core','расчёт');e(g,'core','three','события',{points:[[880,225],[880,282],[185,282],[185,340]]});e(g,'ui','api','сохранение',{points:[[185,225],[185,262],[540,262],[540,340]]});e(g,'api','db');e(g,'api','core','проверка KPI',{points:[[675,400],[715,400],[715,165],[760,165]]});
 n(g,'archnote',65,555,900,70,'Нет интеграций с ERP, MES, 1С и оборудованием.\nКлиентские KPI не считаются доверенными при сохранении расчёта.','text',{font:21});

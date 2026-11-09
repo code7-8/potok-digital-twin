@@ -1118,7 +1118,7 @@
             185
           ]
         ],
-        "label": "POST /scenarios",
+        "label": "POST /api/calculations",
         "dash": false,
         "labelY": 173,
         "font": 17
@@ -1166,7 +1166,7 @@
             340
           ]
         ],
-        "label": "Записать параметры",
+        "label": "Загрузить набор",
         "dash": false,
         "labelY": 328,
         "font": 17
@@ -1182,7 +1182,7 @@
             390
           ]
         ],
-        "label": "ID сценария",
+        "label": "Данные + SHA-256",
         "dash": true,
         "labelY": 378,
         "font": 17
@@ -1190,15 +1190,15 @@
       {
         "points": [
           [
-            97,
+            317,
             445
           ],
           [
-            317,
+            952,
             445
           ]
         ],
-        "label": "POST /runs + seed",
+        "label": "Валидация и расчёт",
         "dash": false,
         "labelY": 433,
         "font": 17
@@ -1206,48 +1206,48 @@
       {
         "points": [
           [
-            317,
+            952,
             495
           ],
           [
-            952,
+            317,
             495
           ]
         ],
-        "label": "Пересчитать",
-        "dash": false,
+        "label": "Проверенные KPI",
+        "dash": true,
         "labelY": 483,
         "font": 17
       },
       {
         "points": [
           [
-            952,
+            317,
             540
           ],
           [
-            317,
+            757,
             540
           ]
         ],
-        "label": "Проверенные KPI",
-        "dash": true,
+        "label": "batch: сценарий, расчёт, аудит",
+        "dash": false,
         "labelY": 528,
         "font": 17
       },
       {
         "points": [
           [
-            317,
+            757,
             585
           ],
           [
-            757,
+            317,
             585
           ]
         ],
-        "label": "Сохранить KPI и версию",
-        "dash": false,
+        "label": "COMMIT или ROLLBACK",
+        "dash": true,
         "labelY": 573,
         "font": 17
       },
@@ -1262,7 +1262,7 @@
             635
           ]
         ],
-        "label": "Подтверждение",
+        "label": "ID расчёта + KPI",
         "dash": true,
         "labelY": 623,
         "font": 17
@@ -1433,9 +1433,9 @@
         "y": 105,
         "w": 270,
         "h": 120,
-        "text": "Web Worker\nСерии экспериментов\nПрогресс и отмена",
+        "text": "Web Worker\nСравнение и демонстрация\nПрогресс и отмена",
         "shape": "rect",
-        "font": 21
+        "font": 19.01921836708371
       },
       {
         "id": "core",
