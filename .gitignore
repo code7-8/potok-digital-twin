@@ -15,3 +15,12 @@
 *.pem
 *.log
 .DS_Store
+
+/submission/
+/AGENTS.md
+/HANDOFF.md
+/PROJECT_PLAN.md
+/docs/acceptance.md
+/tools/build-diagrams.mjs
+/tools/build-report.py
+/tools/deck-content.mjs
